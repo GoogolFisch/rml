@@ -20,10 +20,13 @@ building:
 
 includes: console.h
 
+create: begin.c
+	$(CC) $(OPT) begin.c -o begin.$(EXEC)
 
 help:
 	@echo main
 	@echo training
+	@echo create
 	@echo building
 	@echo help
 	@echo clean

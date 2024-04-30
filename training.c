@@ -6,7 +6,7 @@
 
 int tokenTraining(int argc,char **argv){
 	char tokenFile[] = "tokens.tok\0";
-	char dataFile[] = "data.txt\0";
+	char dataFile[] = "data.big.txt\0";
 	struct TokTokenDB *tokenList = tokReadList(tokenFile);
 	int32_t sizeing = 0;
 	int indexing = 1;
@@ -40,13 +40,60 @@ int main(int argc,char **argv){
 	// loading
 	char *netFile = argv[1];
 	char *trainFile = argv[2];
+	int32_t tokeAmmount = 0;
+	struct TokTokenDB *tokenListing = tokReadList("tokens.tok\0");
 	struct NetNetwork *net = netFromFile(netFile);
 	struct NetNetwork *cp = netCopyNet(net);
+	struct DatTokens *trainTok = datBigTokens(tokenListing,datStringing(trainFile));
 	netClearNet(cp);
 	// doing stuff
 	int roundCount = 100;
+	int32_t rand;
+	uint32_t *takeTokens;
+	struct NetVector *ttokenVec;
+	struct NetVector **copyVector = netMakeNullVec(tokenListing.length);
+	struct NetVector *error,*cerror,*upperError,*lowerError;
+	int over;
 	while(roundCount-- >= 0){
+		error = calloc(sizeof(CALC_ACC) * 0,sizeof(char));
+		rand = (rand >> 1) * 19 + 7;
+		takeTokens = trainTok->token[rand];
+		ttokenVec = malloc(sizeof(struct NetVector*) * takeTokens->length);
+		for(over = 0;over < taketokens->length;over++){
+			ttokenVec[over] = copyVector;
+			// get upper part of error.
+			upperError = netSplitVectors(copyVector,tokAmmount,-1);
+			// get lower part of error
+			lowerError = datVecFromToken(takeTokens[1 + over],tokenListing.length);
+			// combine Vectors
+			free(copyVector);
+			copyVector = netJoinVectors(lowerError,upperError);
+			free(uppererror);
+			free(lowerError);
+			copyVector = netCollapseNetwork(net,copyVector);
+		}
+		cperror = copyVector;
+		for(;over >= 0;over--){
+			// get upper part of error.
+			upperError = netSplitVectors(cperror,tokAmmount,-1);
+			// get lower part of error
+			lowerError = datVecFromToken(takeTokens[1 + over],tokenListing.length);
+			difVector(lowerError,ttokenVec[over]);
+
+			// combine Vectors
+			free(cperror);
+			error = netJoinVectors(lowerError,upperError);
+			free(uppererror);
+			free(lowerError);
+			// the error calc
+			cperror = netReverseErroring(net,cp,ttokenVec[over],error,0.1f);
+			free(error);
+			error = cperror;
+		}
+
 	//	netReverseTraining(net,cp,,);
+		free(ttokenVec);
+		free(error);
 	}
 	
 	// saving

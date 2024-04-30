@@ -6,6 +6,8 @@
 #include<stdint.h>
 #include<stdbool.h>
 
+#define TOKTYPE int32_t
+
 struct TokString{
 	char length;
 	char* string;

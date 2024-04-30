@@ -54,3 +54,4 @@ dkms.conf
 # other not wanted
 *.bak
 *.swp
+*.big.txt

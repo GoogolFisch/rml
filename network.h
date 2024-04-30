@@ -4,6 +4,7 @@
 
 #include<stdlib.h>
 #include<stdint.h>
+#include"tokens.h"
 
 #define CALC_ACC float
 
@@ -49,7 +50,7 @@ struct NetNetwork *netFromFile(char *chptr){
 	char safty;
 	for(int position = 0;position < maxima * 2;position++){
 		if((safty = getc(fptr)) == EOF){
-			fprintf(stderr,"The File was better, but now big for dimensions?\n");
+			fprintf(stderr,"The File was better, but not big for dimensions?\n");
 			return NULL;
 		}
 		// what? why zeros, and then do this crap? IDK
@@ -65,6 +66,7 @@ struct NetNetwork *netFromFile(char *chptr){
 		neu->layer[position] = malloc(sizeof(*(neu->layer)) * matrixSize);
 		fread(&(neu->layer[position][overMatrix]),sizeof(CALC_ACC),matrixSize,fptr);
 	}
+	fclose(fptr);
 }
 
 void netToFile(struct NetNetwork *net,char *chptr){
@@ -82,6 +84,7 @@ void netToFile(struct NetNetwork *net,char *chptr){
 		matrixSize = (net->size[position] + 1) * net->size[position + 1];
 		fwrite(&(net->layer[position][overMatrix]),sizeof(CALC_ACC),matrixSize,fptr);
 	}
+	fclose(fptr);
 }
 
 struct NetNetwork *netCopyNet(struct NetNetwork *net){
@@ -150,10 +153,17 @@ CALC_ACC *netLayerCalcing(CALC_ACC *layer,int sizeX,int sizeY,CALC_ACC *input){
 	return out;
 }
 
+struct NetVector *netMakeNullVec(int size){
+	struct NetVector *out;
+	out = calloc(sizeof(out->size) + sizeof(CALC_ACC) * size,sizeof(char));
+	out->size = size;
+	return out;
+}
 struct NetVector *netMakeVector(int size,CALC_ACC *data){
 	struct NetVector *out;
 	out = malloc(sizeof(out->size) + sizeof(CALC_ACC) * size);
 	for(int position = 0;position < size;out->data[position] = data[position++]);
+	out->size = size;
 	return out;
 }
 
@@ -218,6 +228,36 @@ struct NetVector *netReverseTraining(struct NetNetwork *net,struct NetNetwork *d
 	free(copy);
 	return output;
 }
+struct NetVector *netReverseErroring(struct NetNetwork *net,struct NetNetwork *dif,struct NetVector *vec,struct NetVector *err,float strength){
+	if(net->depth != dif->depth)return NULL;
+	// let it burn...
+	CALC_ACC *copy = malloc(sizeof(CALC_ACC) * (vec->size + 1));
+	for(int position = 0;position < vec->size;copy[position] = vec->data[position++]);
+	copy[vec->size] = 1.0;
+	CALC_ACC *saveInto;
+	CALC_ACC *layerSave[(int)net->depth];
+	int matrixOver;
+	int matrixMaxima;
+	int vectorWidth;
+
+	for(int position = 0;position < net->depth;position++){
+		saveInto = netLayerCalcing(net->layer[position],net->size[position] + 1,net->size[position + 1],copy);
+		// am I a good person?
+		layerSave[position] = copy;
+		copy = saveInto;
+		for(int position = 0;position < net->size[position + 1];copy[position] = netValueMod(copy[position++]));
+	}
+	for(int position = 0;position < err->size && position < net->size[net->depth];copy[position] = err->data[position++]);
+	for(int position = net->depth - 1;position >= 0;position--){
+		saveInto = netReverseVector(net->layer[position],dif->layer[position],net->size[position] + 1,net->size[position + 1],copy,layerSave[position]);
+		free(copy);
+		copy = saveInto;
+	}
+
+	struct NetVector *output = netMakeVector(net->size[net->depth - 1],copy);
+	free(copy);
+	return output;
+}
 
 struct NetVector *netJoinVectors(struct NetVector *lower,struct NetVector *upper){
 	int totSize = lower->size + upper->size;
@@ -265,4 +305,3 @@ void printVector(struct NetVector *vec){
 }
 
 #endif
-
