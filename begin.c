@@ -6,11 +6,7 @@
 #include"dataMod.h"
 #include"console.h"
 
-int main(int argc,char **argv){
-	char *types = getAfterArg(argc,argv,"-t");
-	char *output = getAfterArg(argc,argv,"-o");
-	if(types == NULL)return 1;
-	if(output == NULL)return 1;
+int makeNetworkNow(char *types,char *output){
 	int32_t depthCount = 1; // counting ,
 	char carry;
 	int pos = 0;
@@ -59,6 +55,28 @@ int main(int argc,char **argv){
 	}
 	// now saving it
 	netToFile(net,output);
+	return 0;
+}
+int makeTokenListNow(char *types,char *output){
+	FILE *fptr = fopen(output,"wb");
+	fwrite("\0\0\0\0",sizeof(char),3,fptr);
+	fclose(fptr);
+}
+
+int main(int argc,char **argv){
+	char *types = getAfterArg(argc,argv,"-t");
+	char *output = getAfterArg(argc,argv,"-o");
+	if(types == NULL)return 1;
+	if(output == NULL)return 1;
+
+	if(containsArg(argc,argv,"-net")){
+		return makeNetworkNow(types,output);
+	}else if(containsArg(argc,argv,"-tok")){
+		return makeTokenListNow(types,output);
+	}else if(containsArg(argc,argv,"-h")){
+		printf("-net for the network and also use -t\n");
+		printf("-tok to reset the token list\n");
+	}
 
 	return 0;
 }
