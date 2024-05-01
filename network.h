@@ -30,7 +30,7 @@ union netRandomSame seed;
 // create from file
 struct NetNetwork *netFromFile(char *chptr){
 	// the usual
-	FILE *fptr = fopen(chptr,"r");
+	FILE *fptr = fopen(chptr,"rb");
 	if(fptr == NULL){
 		fprintf(stderr,"The File expected is not real! Use a better one!\n");
 		return NULL;
@@ -70,13 +70,13 @@ struct NetNetwork *netFromFile(char *chptr){
 }
 
 void netToFile(struct NetNetwork *net,char *chptr){
-	FILE *fptr = fopen(chptr,"w");
+	FILE *fptr = fopen(chptr,"wb");
 	if(fptr == NULL)return;
-	putc(net->depth,fptr);
-	const int maxima = 1 + (int) net->depth;
-	for(int position = 0;position < maxima;position++){
-		putc(net->size[position] >> 8,fptr);
-		putc(net->size[position] & 255,fptr);
+	fputc(net->depth,fptr);
+	const int maxima = (int) net->depth;
+	for(int position = 0;position <= maxima;position++){
+		fputc(net->size[position] >> 8,fptr);
+		fputc(net->size[position] & 255,fptr);
 	}
 	uint32_t matrixSize;
 	uint32_t overMatrix;

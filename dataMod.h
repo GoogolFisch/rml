@@ -15,7 +15,7 @@ struct DatTrain{
 
 struct DatTokened{
 	uint64_t length;
-	TOKTYPE (*token)[];
+	TOKTYPE *token[];
 };
 
 
@@ -37,21 +37,25 @@ struct DatTrain *datStringing(struct TokStrString *str){
 	int subStringLength = 7;
 	int lastIndex = 0;
 	int cp;
+	int splitPos = 0;
 	for(int pos = 0;pos < str->length;pos++){
 		arg = str->string[pos];
 		subStringLength++;
 		if(arg != '\n')continue;
 		if(nl){
 			splited->length = subStringLength;
-			splited->part = malloc(sizeof(char) * splited->length);
-			for(cp = 0;cp < subStringLength;cp++){splited->part[cp] = str->part[lastIndex + cp];}
-			splited->part[cp++] = 'H';
-			splited->part[cp++] = 'u';
-			splited->part[cp++] = 'm';
-			splited->part[cp++] = 'a';
-			splited->part[cp++] = 'n';
-			splited->part[cp++] = ':';
-			splited->part[cp++] = ' ';
+			splited->part[partPos].string = malloc(sizeof(char) * splited->length);
+			splited->part[partPos].length = splited->length;
+			for(cp = 0;cp < subStringLength;cp++){
+				splited->part[partPos].string[cp] = str->string[lastIndex + cp];
+			}
+			splited->part[partPos].string[cp++] = 'H';
+			splited->part[partPos].string[cp++] = 'u';
+			splited->part[partPos].string[cp++] = 'm';
+			splited->part[partPos].string[cp++] = 'a';
+			splited->part[partPos].string[cp++] = 'n';
+			splited->part[partPos].string[cp++] = ':';
+			splited->part[partPos].string[cp++] = ' ';
 			lastIndex = pos;
 			subStringLength = 7;
 			partPos++;
@@ -66,10 +70,18 @@ struct DatTrain *datStringing(struct TokStrString *str){
 struct DatTokened *datBigTokens(struct TokTokenDB *list,struct DatTrain *str){
 	// this will also free!
 	struct DatTokened *tokens = malloc(sizeof(struct DatTokened) + sizeof(TOKTYPE*) * str->length);
+	struct TokStrString *carryingMe;
 	tokens->length = str->length;
 	for(int pos = 0;pos < tokens->length;pos++){
-		tokens->token = tok2Tokens(list,str->part[pos]);
-		free(str->part[pos]);
+		carryingMe = malloc(sizeof(struct TokStrString) + sizeof(char) * str->part[pos].length);
+		carryingMe->length = str->part[pos].length;
+		for(int overStr = 0;overStr < carryingMe->length;overStr++){
+			carryingMe->string[overStr] = str->part[pos].string[overStr];
+		}
+		tokens->token[pos] = tok2Tokens(list,carryingMe);
+		//tokens->token[pos] = tok2Tokens(list,(str->part[pos]));
+		free(&(str->part[pos]));
+		free(carryingMe);
 	}
 	free(str);
 	return tokens;

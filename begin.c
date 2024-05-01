@@ -30,7 +30,6 @@ int main(int argc,char **argv){
 		if(carry == ','){
 			numberPos++;
 			net->size[numberPos] = 0;
-			break;
 		}
 		else if(carry >= '0' && carry <= '9'){
 			net->size[numberPos] *= 10;
@@ -38,15 +37,24 @@ int main(int argc,char **argv){
 		}
 	}while(carry != '\0');
 	net->layer = malloc(sizeof(net->layer) * net->depth);
-	union netRandomSame mask;
-	mask.dlb = -1.99999999999999977795539507497;
+	union netRandomSame mask; mask.dlb = -1.99999999999999977795539507497D;
+	union netRandomSame base; base.dlb = 1.0D;
+	union netRandomSame value;
+	int64_t randSeed;
 	int64_t matrixSize;
 	int64_t matrixOver;
 	for(int layer = 0;layer < net->depth;layer++){
-		matrixSize = (net->depth[layer] + 1) * net->depth[layer + 1];
+		printf("- %i -> (%i,%i)\n",layer,net->size[layer],net->size[layer + 1]);
+		matrixSize = (net->size[layer] + 1) * net->size[layer + 1];
 		net->layer[layer] = malloc(sizeof(CALC_ACC) * matrixSize);
 		for(matrixOver = 0;matrixOver < matrixSize;matrixOver++){
-			(union netrandomSame)net->layer[layer][matrixOver] &= mask.lng;
+			value.dlb = net->layer[layer][matrixOver];
+			randSeed = (randSeed >> 1) * 23 + 19;
+			value.lng += randSeed;
+			value.lng += randSeed;
+			value.lng &= mask.lng;
+			value.lng |= base.lng;
+			net->layer[layer][matrixOver] = value.dlb;
 		}
 	}
 	// now saving it

@@ -1,5 +1,6 @@
 
 OPT = -g3 -O0
+OP3 = -O3
 
 ifeq ($(OS), Windows_NT)
         EXEC=exe
@@ -21,7 +22,7 @@ building:
 includes: console.h
 
 create: begin.c
-	$(CC) $(OPT) begin.c -o begin.$(EXEC)
+	$(CC) $(OP3) begin.c -o begin.$(EXEC)
 
 help:
 	@echo main
