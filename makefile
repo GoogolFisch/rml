@@ -16,18 +16,22 @@ main: seed.c includes
 training: training.c includes
 	$(CC) $(OPT) training.c -o learn.$(EXEC)
 
+create: begin.c
+	$(CC) $(OP3) begin.c -o begin.$(EXEC)
+
+all: main training create
+
 building:
 	mkdir -p ./build
 
 includes: console.h
 
-create: begin.c
-	$(CC) $(OP3) begin.c -o begin.$(EXEC)
-
 help:
 	@echo main
 	@echo training
 	@echo create
+	@echo all
+	@echo  MISC ---
 	@echo building
 	@echo help
 	@echo clean

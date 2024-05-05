@@ -47,7 +47,7 @@ struct NetNetwork *netFromFile(char *chptr){
 		return 0;
 	}
 	// load the dimension size!
-	char safty;
+	unsigned char safty;
 	for(int position = 0;position < maxima * 2;position++){
 		if((safty = getc(fptr)) == EOF){
 			fprintf(stderr,"The File was better, but not big for dimensions?\n");
@@ -57,16 +57,16 @@ struct NetNetwork *netFromFile(char *chptr){
 		neu->size[position >> 1] = safty + neu->size[position >> 1] * 256;
 	}
 	// OH
-	uint32_t matrixSize;
-	uint32_t overMatrix;
+	uint64_t matrixSize;
 	neu->layer = malloc(sizeof(neu->layer) * (maxima - 1));
 	for(int position = 0;position < maxima;position++){
 		// injecting a extra value at the end of the input! Dump, but easy
 		matrixSize = (neu->size[position] + 1) * neu->size[position + 1];
 		neu->layer[position] = malloc(sizeof(*(neu->layer)) * matrixSize);
-		fread(&(neu->layer[position][overMatrix]),sizeof(CALC_ACC),matrixSize,fptr);
+		fread(neu->layer[position],sizeof(CALC_ACC),matrixSize,fptr);
 	}
 	fclose(fptr);
+	return neu;
 }
 
 void netToFile(struct NetNetwork *net,char *chptr){
@@ -78,8 +78,7 @@ void netToFile(struct NetNetwork *net,char *chptr){
 		fputc(net->size[position] >> 8,fptr);
 		fputc(net->size[position] & 255,fptr);
 	}
-	uint32_t matrixSize;
-	uint32_t overMatrix;
+	uint64_t matrixSize, overMatrix;
 	for(int position = 0;position < maxima;position++){
 		matrixSize = (net->size[position] + 1) * net->size[position + 1];
 		fwrite(&(net->layer[position][overMatrix]),sizeof(CALC_ACC),matrixSize,fptr);
@@ -89,13 +88,14 @@ void netToFile(struct NetNetwork *net,char *chptr){
 
 struct NetNetwork *netCopyNet(struct NetNetwork *net){
 	struct NetNetwork *neu;
-	uint32_t matrixSize;
-	uint32_t overMatrix;
+	uint64_t matrixSize;
+	uint64_t overMatrix;
        	neu = malloc(sizeof(neu));
 	neu->depth = net->depth;
 	// a clear and a check
 	const int maxima = 1 + (int) neu->depth;
 	neu->size = malloc(sizeof(*(neu->size)) * maxima);
+	neu->layer = malloc(sizeof(CALC_ACC) * neu->depth);
 	if(neu->size == NULL){
 		fprintf(stderr,"I used a catch just for FUN! It caught!!!\n");
 		return 0;
@@ -103,8 +103,8 @@ struct NetNetwork *netCopyNet(struct NetNetwork *net){
 	for(int position = 0;position < maxima;position++){
 		neu->size[position] = net->size[position];
 		// layer copying!
-		matrixSize = (neu->size[position] + 1) * neu->size[position + 1];
-		neu->layer[position] = malloc(sizeof(*(neu->layer)) * matrixSize);
+		matrixSize = (net->size[position] + 1) * net->size[position + 1];
+		neu->layer[position] = malloc(sizeof(CALC_ACC) * matrixSize);
 		for(overMatrix = 0;overMatrix < matrixSize;overMatrix++){
 			neu->layer[position][overMatrix] = net->layer[position][overMatrix];
 		}
@@ -114,7 +114,7 @@ struct NetNetwork *netCopyNet(struct NetNetwork *net){
 
 void netClearNet(struct NetNetwork *net){
 	const int maxima = 1 + (int) net->depth;
-	uint32_t matrixSize,overMatrix;
+	uint64_t matrixSize,overMatrix;
 	for(int position = 0;position < maxima;position++){
 		// clearing
 		matrixSize = (net->size[position] + 1) * net->size[position + 1];
@@ -126,8 +126,7 @@ void netClearNet(struct NetNetwork *net){
 
 void netMutateNet(struct NetNetwork *net,int every, CALC_ACC strength){
 	const int maxima = 1 + (int) net->depth;
-	uint32_t matrixSize;
-	uint32_t overMatrix;
+	uint64_t matrixSize, overMatrix;
 	for(int position = 0;position < maxima;position++){
 		// clearing
 		matrixSize = (net->size[position] + 1) * net->size[position + 1];
@@ -145,8 +144,8 @@ CALC_ACC netValueMod(CALC_ACC value){ return value > 0 ? value : 0.1 * value; }
 CALC_ACC netRevValue(CALC_ACC value){ return value > 0 ? 1.0 : 0.1; }
 
 CALC_ACC *netLayerCalcing(CALC_ACC *layer,int sizeX,int sizeY,CALC_ACC *input){
-	CALC_ACC *out = calloc(sizeof(CALC_ACC) * sizeY + 1,0);
-	uint32_t overIndex = 0;
+	CALC_ACC *out = calloc(sizeof(CALC_ACC) * sizeY + 1,sizeof(char));
+	uint64_t overIndex = 0;
 	for(int overY = 0;overY < sizeY;overY++)
 		for(int overX = 0;overX < sizeX;overX++)
 			out[overY] += input[overX] * layer[overIndex++];
@@ -168,6 +167,7 @@ struct NetVector *netMakeVector(int size,CALC_ACC *data){
 }
 
 struct NetVector *netCollapseNetwork(struct NetNetwork *net,struct NetVector *vec){
+	// FLAG FIXME
 	// let it burn...
 	CALC_ACC *copy = malloc(sizeof(CALC_ACC) * (vec->size + 1));
 	for(int position = 0;position < vec->size;copy[position] = vec->data[position++]);
@@ -187,13 +187,12 @@ struct NetVector *netCollapseNetwork(struct NetNetwork *net,struct NetVector *ve
 }
 
 CALC_ACC *netReverseVector(CALC_ACC *layer,CALC_ACC *erLay,int sizeX,int sizeY,CALC_ACC *input,CALC_ACC *upper){
-	// TODO
 	CALC_ACC *erros = malloc(sizeof(CALC_ACC) * sizeX);
 	int overIndex = 0;
 	for(int oY = 0;oY < sizeY;oY++){
-		for(int oX = 0;oX < sizeX;oX++){
-			erros[oX] += input[oY] * layer[overIndex++];
-			erLay[oX + oY * sizeX] += input[oX] * upper[oY];
+		for(int oX = 0;oX < sizeX;oX++,overIndex++){
+			erros[oX] += input[oY] * layer[overIndex];
+			erLay[overIndex] += input[oY] * upper[oX];
 		}
 	}
 	return erros;
@@ -247,9 +246,10 @@ struct NetVector *netReverseErroring(struct NetNetwork *net,struct NetNetwork *d
 		copy = saveInto;
 		for(int position = 0;position < net->size[position + 1];copy[position] = netValueMod(copy[position++]));
 	}
-	for(int position = 0;position < err->size && position < net->size[net->depth];copy[position] = err->data[position++]);
+	for(int position = 0;position < err->size;position)copy[position] = err->data[position++];
 	for(int position = net->depth - 1;position >= 0;position--){
 		saveInto = netReverseVector(net->layer[position],dif->layer[position],net->size[position] + 1,net->size[position + 1],copy,layerSave[position]);
+		// TODO why is copy not nice???
 		free(copy);
 		copy = saveInto;
 	}
@@ -260,8 +260,9 @@ struct NetVector *netReverseErroring(struct NetNetwork *net,struct NetNetwork *d
 }
 
 struct NetVector *netJoinVectors(struct NetVector *lower,struct NetVector *upper){
-	int totSize = lower->size + upper->size;
+	int64_t totSize = lower->size + upper->size;
 	struct NetVector *nvec = malloc(sizeof(struct NetVector) + sizeof(CALC_ACC) * totSize);
+	nvec->size = totSize;
 	int indexing;
 	for(    indexing = 0;indexing < lower->size;indexing++) nvec->data[indexing] = lower->data[indexing];
 	for(int position = 0;position < upper->size;position++) nvec->data[indexing++] = lower->data[position];
@@ -270,13 +271,14 @@ struct NetVector *netJoinVectors(struct NetVector *lower,struct NetVector *upper
 
 struct NetVector *netSplitVectors(struct NetVector *base,int starting,int ending){
 	// some dump stuff?
-	if(ending < 0)ending = base->size - ending + 1;
+	if(ending < 0)ending = base->size + ending + 1;
 	if(ending > base->size)ending = base->size;
 	if(starting > ending)starting = ending;
 	if(starting < 0)starting = 0;
 	if(starting > ending)ending = starting;
-	int totSize = starting - ending;
+	int64_t totSize = ending - starting;
 	struct NetVector *vec = malloc(sizeof(struct NetVector) + sizeof(CALC_ACC) * totSize);
+	vec->size = totSize;
 	int index;
 	int over = 0;
 	for(index = starting;index < ending;index++){

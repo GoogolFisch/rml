@@ -3,10 +3,11 @@
 #include"console.h"
 #include"network.h"
 #include"tokens.h"
+#include"dataMod.h"
 
 int tokenTraining(int argc,char **argv){
-	char *tokenFile = getArgAfter(argc,argv,"-t");
-	char *dataFile = getArgAfter(argc,argv,"-d");
+	char *tokenFile = getAfterArg(argc,argv,"-t");
+	char *dataFile = getAfterArg(argc,argv,"-d");
 	if(NULL == dataFile || tokenFile == NULL){
 		printf("-t tokenFile\n");
 		printf("-d dataFile\n");
@@ -19,7 +20,7 @@ int tokenTraining(int argc,char **argv){
 		sizeing += argv[1][indexing++] - '0';
 	}
 	tokListSizeing(&tokenList,sizeing);
-	struct TokStrString *string = tokStringFile(tokenList,dataFile);
+	struct TokStrString *string = tokStringFile(dataFile);
 
 	while(tokenList->length < tokenList->maxLength){
 		tokTrain(tokenList,string);
@@ -47,9 +48,9 @@ int main(int argc,char **argv){
 		return tokenTraining(argc,argv);
 
 	// loading
-	char *tokenFile = getArgAfter(argc,argv,"-t");
-	char *netFile = getArgAfter(argc,argv,"-n");
-	char *trainFile = getArgAfter(argc,argv,"-d");
+	char *tokenFile = getAfterArg(argc,argv,"-t");
+	char *netFile = getAfterArg(argc,argv,"-n");
+	char *trainFile = getAfterArg(argc,argv,"-d");
 	if(tokenFile == NULL || netFile == NULL || trainFile == NULL)
 	{
 		printf("OPTIONS:\n");
@@ -59,55 +60,57 @@ int main(int argc,char **argv){
 		printf("-d [FILE] > dataFile\n");
 		return 2;
 	}
-	int32_t tokeAmmount = 0;
 	struct TokTokenDB *tokenListing = tokReadList(tokenFile);
 	struct NetNetwork *net = netFromFile(netFile);
 	struct NetNetwork *cp = netCopyNet(net);
-	struct DatTokens *trainTok = datBigTokens(tokenListing,datStringing(trainFile));
+	struct TokStrString *trainData = tokStringFile(trainFile);
+	struct DatTokened *trainTok = datBigTokens(tokenListing,datStringing(trainData));
+	int32_t tokAmmount = tokenListing->length;
+	free(trainData);
 	netClearNet(cp);
 	// doing stuff
 	int roundCount = 100;
 	int32_t rand;
-	uint32_t *takeTokens;
-	struct NetVector *ttokenVec;
-	struct NetVector **copyVector = netMakeNullVec(tokenListing.length);
+	int32_t *takeTokens;
+	struct NetVector **ttokenVec;
+	struct NetVector *copyVector = netMakeNullVec(tokenListing->length);
 	struct NetVector *error,*cerror,*upperError,*lowerError;
 	int over;
 	while(roundCount-- >= 0){
 		error = calloc(sizeof(CALC_ACC) * 0,sizeof(char));
 		rand = (rand >> 1) * 19 + 7;
-		takeTokens = trainTok->token[rand];
-		ttokenVec = malloc(sizeof(struct NetVector*) * takeTokens->length);
-		for(over = 0;over < taketokens->length;over++){
+		takeTokens = trainTok->token[rand % trainTok->length];
+		ttokenVec = malloc(sizeof(struct NetVector*) * takeTokens[0]);
+		for(over = 0;over < takeTokens[0];over++){
 			ttokenVec[over] = copyVector;
 			// get upper part of error.
 			upperError = netSplitVectors(copyVector,tokAmmount,-1);
 			// get lower part of error
-			lowerError = datVecFromToken(takeTokens[1 + over],tokenListing.length);
+			lowerError = datVecFromToken(takeTokens[1 + over],tokenListing->length);
 			// combine Vectors
-			free(copyVector);
 			copyVector = netJoinVectors(lowerError,upperError);
-			free(uppererror);
+			free(upperError);
 			free(lowerError);
 			copyVector = netCollapseNetwork(net,copyVector);
 		}
-		cperror = copyVector;
+		over--;
+		cerror = netMakeNullVec(net->size[net->depth]);
 		for(;over >= 0;over--){
 			// get upper part of error.
-			upperError = netSplitVectors(cperror,tokAmmount,-1);
+			upperError = netSplitVectors(cerror,tokAmmount,net->size[net->depth]);
 			// get lower part of error
-			lowerError = datVecFromToken(takeTokens[1 + over],tokenListing.length);
+			lowerError = datVecFromToken(takeTokens[1 + over],tokenListing->length);
 			difVector(lowerError,ttokenVec[over]);
 
 			// combine Vectors
-			free(cperror);
+			free(cerror);
 			error = netJoinVectors(lowerError,upperError);
-			free(uppererror);
+			free(upperError);
 			free(lowerError);
 			// the error calc
-			cperror = netReverseErroring(net,cp,ttokenVec[over],error,0.1f);
+			cerror = netReverseErroring(net,cp,ttokenVec[over],error,0.1f);
 			free(error);
-			error = cperror;
+			error = cerror;
 		}
 
 	//	netReverseTraining(net,cp,,);

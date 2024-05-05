@@ -9,7 +9,7 @@
 #define TOKTYPE int32_t
 
 struct TokString{
-	char length;
+	uint32_t length;
 	char* string;
 };
 struct TokStrString{
@@ -218,12 +218,12 @@ void tokTrain(struct TokTokenDB *list,struct TokStrString *string){
 	free(asTokens);
 	free(basicCounter);
 }
-struct TokStrString *tokStringFile(struct TokTokenDB *list,char *fileName){
+struct TokStrString *tokStringFile(char *fileName){
 	FILE *fptr = fopen(fileName,"r");
 	if(fptr == NULL)return NULL;
 	// get length of file and save it
 	fseek(fptr,0L,SEEK_END);
-	int32_t size = ftell(fptr);
+	int64_t size = ftell(fptr);
 	fseek(fptr,0L,SEEK_SET);
 	// the fun part
 	struct TokStrString *fileString = malloc(sizeof(struct TokStrString) + sizeof(char) * size);

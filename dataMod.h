@@ -25,7 +25,10 @@ struct DatTrain *datStringing(struct TokStrString *str){
 	char arg;
 	for(int pos = 0;pos < str->length;pos++){
 		arg = str->string[pos];
-		if(arg != '\n')continue;
+		if(arg != '\n'){
+			nl = false;
+			continue;
+		}
 		if(nl){
 			newLineing++;
 			nl = false;
@@ -33,19 +36,24 @@ struct DatTrain *datStringing(struct TokStrString *str){
 			nl = true;
 	}
 	struct DatTrain *splited = malloc(sizeof(struct DatTrain) + sizeof(struct TokString) * newLineing);
+	splited->length = newLineing;
 	int partPos = 0;
-	int subStringLength = 7;
+	int subStringLength = 0;
 	int lastIndex = 0;
 	int cp;
 	int splitPos = 0;
-	for(int pos = 0;pos < str->length;pos++){
+	nl = false;
+	for(int pos = 1;pos < str->length;pos++){
 		arg = str->string[pos];
 		subStringLength++;
-		if(arg != '\n')continue;
+		if(arg != '\n'){
+			nl = false;
+			continue;
+		}
 		if(nl){
-			splited->length = subStringLength;
-			splited->part[partPos].string = malloc(sizeof(char) * splited->length);
-			splited->part[partPos].length = splited->length;
+			subStringLength--;
+			splited->part[partPos].string = malloc(sizeof(char) * (subStringLength + 7));
+			splited->part[partPos].length = subStringLength + 7;
 			for(cp = 0;cp < subStringLength;cp++){
 				splited->part[partPos].string[cp] = str->string[lastIndex + cp];
 			}
@@ -57,11 +65,12 @@ struct DatTrain *datStringing(struct TokStrString *str){
 			splited->part[partPos].string[cp++] = ':';
 			splited->part[partPos].string[cp++] = ' ';
 			lastIndex = pos;
-			subStringLength = 7;
+			subStringLength = 0;
 			partPos++;
 			nl = false;
-		}else
-			nl = true;
+			continue;
+		}
+		nl = true;
 	}
 
 	return splited;
@@ -80,20 +89,21 @@ struct DatTokened *datBigTokens(struct TokTokenDB *list,struct DatTrain *str){
 		}
 		tokens->token[pos] = tok2Tokens(list,carryingMe);
 		//tokens->token[pos] = tok2Tokens(list,(str->part[pos]));
-		free(&(str->part[pos]));
+		free((str->part[pos].string));
 		free(carryingMe);
 	}
 	free(str);
 	return tokens;
 }
 
-struct NetVector *datVecFromToken(uint32_t token,uint32_t size){
-	struct NetVector *vec = calloc(sizeof(CALC_ACC) * (size + 256),sizeof(char));
-	vec->size = size + 256;
+struct NetVector *datVecFromToken(int32_t token,uint32_t size){
+	struct NetVector *vec = malloc(sizeof(struct NetVector) + sizeof(CALC_ACC) * (size));
+	vec->size = size;
+	for(int over = 0;over < vec->size;vec->data[over++] = 0.0F);
 	if(token < 0)
 		vec->data[-token - 1] = 1.0F;
 	else
-		vec->data[token] = 1.0F;
+		vec->data[token + 255] = 1.0F; // gotten via testing
 	return vec;
 }
 
